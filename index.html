@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat App</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f2f2f2;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 50px auto;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            padding: 0;
+        }
+
+        .chat-header {
+            background-color: #075e54;
+            color: #fff;
+            padding: 15px 20px;
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-header h1 {
+            margin: 0;
+            font-size: 22px;
+        }
+
+        .chat-messages {
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 20px;
+            display: none;
+        }
+
+        .message {
+            margin-bottom: 20px;
+            padding: 10px;
+            border-radius: 10px;
+        }
+
+        .message-received {
+            background-color: #f0f0f0;
+            margin-left: 20px;
+        }
+
+        .message-sent {
+            background-color: #dcf8c6;
+            margin-right: 20px;
+            text-align: right;
+        }
+
+        .message p {
+            margin: 0;
+        }
+
+        .message-received p {
+            color: #000;
+        }
+
+        .message-sent p {
+            color: #075e54;
+        }
+
+        .message-sender {
+            font-size: 12px;
+            color: #777;
+            margin-top: 5px;
+        }
+
+        .chat-input {
+            padding: 20px;
+            border-top: 1px solid #ccc;
+            display: none;
+        }
+
+        .chat-input input[type="text"] {
+            width: calc(100% - 40px);
+            padding: 10px;
+            border: none;
+            border-radius: 20px;
+            margin-right: 10px;
+        }
+
+        .chat-input button {
+            background-color: #075e54;
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            padding: 10px;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+        }
+
+        .chat-input button:hover {
+            background-color: #128c7e;
+        }
+
+        .join-input {
+            padding: 20px;
+            border-top: 1px solid #ccc;
+        }
+
+        .join-input input[type="text"] {
+            width: calc(100% - 40px);
+            padding: 10px;
+            border: none;
+            border-radius: 20px;
+            margin-right: 10px;
+        }
+
+        .join-input button {
+            background-color: #075e54;
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            padding: 10px;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+        }
+
+        .join-input button:hover {
+            background-color: #128c7e;
+        }
+
+        .online-users {
+            background-color: #e0e0e0;
+            padding: 10px;
+            border-radius: 10px;
+            margin-top: 10px;
+        }
+
+        .online-users h2 {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        .online-users ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .online-users ul li {
+            padding: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="chat-header">
+            <h1>Chat</h1>
+            <div class="online-users">
+                <h2>Online Users</h2>
+                <ul id="users-list"></ul>
+            </div>
+        </div>
+        <div class="chat-messages">
+            <!-- Placeholder for chat messages -->
+        </div>
+        <div class="join-input">
+            <input type="text" id="usernameInput" placeholder="Enter your username...">
+            <button onclick="joinChat()">Join</button>
+        </div>
+        <div class="chat-input">
+            <input type="text" id="messageInput" placeholder="Type a message...">
+            <button onclick="sendMessage()">&#9658;</button>
+        </div>
+    </div>
+    
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        let username = '';
+        let onlineUsers = [];
+
+        // Fungsi untuk bergabung ke obrolan
+        function joinChat() {
+            username = document.getElementById('usernameInput').value.trim(); // Dapatkan nama pengguna dari input
+            if (username === "") { // Pastikan nama pengguna tidak kosong
+                alert("Please enter a username."); // Tampilkan pesan peringatan jika nama pengguna kosong
+                return;
+            }
+            socket.emit('username', username); // Kirim event 'username' ke server dengan nama pengguna
+            document.querySelector('.join-input').style.display = 'none'; // Sembunyikan input nama pengguna
+            document.querySelector('.chat-messages').style.display = 'block'; // Tampilkan area pesan
+            document.querySelector('.chat-input').style.display = 'flex'; // Tampilkan input pesan
+        }
+
+        // Fungsi untuk mengirim pesan
+        function sendMessage() {
+            const message = document.getElementById('messageInput').value.trim(); // Dapatkan pesan dari input
+            if (message === "") {
+                alert("Please enter a message."); // Tampilkan pesan peringatan jika pesan kosong
+                return;
+            }
+            if (username === "") {
+                alert("Please enter a username."); // Tampilkan pesan peringatan jika nama pengguna kosong
+                return;
+            }
+            addMessage(message, username, 'message-sent'); // Tambahkan pesan ke layar
+            socket.emit('chat message', { message: message, sender: username }); // Kirim pesan ke server
+            document.getElementById('messageInput').value = ''; // Hapus isi input setelah mengirim pesan
+        }
+
+        // Tangani pesan yang diterima dari server
+        socket.on('chat message', (msg) => {
+            if (msg.sender !== username) { // Cek apakah pesan diterima berasal dari pengguna yang saat ini terhubung
+                addMessage(msg.message, msg.sender, 'message-received'); // Tambahkan pesan yang diterima ke layar
+            }
+        });
+
+        // Tangani event user bergabung
+        socket.on('user joined', (user) => {
+            addMessage(`${user} joined the chat`, '', 'message-info');
+            updateUserList(user, 'add');
+        });
+
+        // Tangani event user keluar
+        socket.on('user left', (user) => {
+            addMessage(`${user} left the chat`, '', 'message-info');
+            updateUserList(user, 'remove');
+        });
+
+        // Fungsi untuk menambahkan pesan ke layar
+        function addMessage(message, sender, className) {
+            const messages = document.querySelector('.chat-messages'); // Dapatkan elemen daftar pesan
+            const item = document.createElement('div'); // Buat elemen div baru untuk pesan
+            item.classList.add('message', className); // Tambahkan kelas pesan sesuai dengan pengirim
+            item.innerHTML = `<p>${message}</p><p class="message-sender">${sender}</p>`; // Isi pesan dan pengirim
+            messages.appendChild(item); // Tambahkan pesan ke daftar pesan
+            messages.scrollTop = messages.scrollHeight; // Otomatis gulir ke bawah
+        }
+
+        // Fungsi untuk memperbarui daftar pengguna online
+        function updateUserList(user, action) {
+            if (action === 'add') {
+                onlineUsers.push(user);
+            } else if (action === 'remove') {
+                onlineUsers = onlineUsers.filter(u => u !== user);
+            }
+            renderUserList();
+        }
+
+        // Fungsi untuk menampilkan daftar pengguna online
+        function renderUserList() {
+            const userList = document.getElementById('users-list');
+            userList.innerHTML = ''; // Kosongkan daftar
+            onlineUsers.forEach(user => {
+                const li = document.createElement('li');
+                li.textContent = user;
+                userList.appendChild(li);
+            });
+        }
+
+        // Tangani daftar pengguna online dari server
+        socket.on('online users', (users) => {
+            onlineUsers = users;
+            renderUserList();
+        });
+    </script>
+</body>
+</html>
